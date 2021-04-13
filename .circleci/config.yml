@@ -1,0 +1,33 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: ubuntu:latest
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: 
+          name: Install Docker
+          command: |
+            apt update -y && apt upgrade -y
+            apt install docker.io -y
+      - run: 
+          name: Build image
+          command: |
+            docker build -t html-nginx-${CIRCLE_BUILD_NUM} .
+      - when:
+          condition:
+            equal: [ main, << pipeline.git.branch >> ]
+          steps: 
+            - run:
+                name: Deploy image into ECR
+                command: |
+                  apt install curl -y
+                  sh ./scripts/install-awscli2.sh
+                  sh ./scripts/push-to-ecr.sh
+
+workflows: 
+  version: 2
+  build_and_deploy: 
+    jobs:
+      - build
